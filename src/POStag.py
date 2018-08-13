@@ -73,6 +73,11 @@ class SelfAttentive(object):
         return QKV
 
 
+class MuiltHeadSelfAttentive(object):
+    def __init__(self):
+        pass
+
+
 class BiLSTMTagger(object):
     def __init__(
             self,
