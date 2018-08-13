@@ -1,4 +1,4 @@
-# Bi-LSTM POS Tagger
+# Part-of-Speech Tagger
 ## Requirements and Setup
 
 * Python 3.5 or higher.
