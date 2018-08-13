@@ -31,7 +31,7 @@ class OutputLayer(object):
         return y
 
 
-class SelfAttentive(object):
+class SingleHeadSelfAttentive(object):
     def __init__(
         self,
         model,
@@ -43,7 +43,7 @@ class SelfAttentive(object):
         self.spec.pop("self")
         self.spec.pop("model")
 
-        self.model = model.add_subcollection("SelfAttentive")
+        self.model = model.add_subcollection("SingleHeadSelfAttentive")
 
         self.d_model = d_model
         self.d_k = d_k
@@ -73,9 +73,37 @@ class SelfAttentive(object):
         return QKV
 
 
-class MuiltHeadSelfAttentive(object):
-    def __init__(self):
-        pass
+class MultiHeadSelfAttentive(object):
+    def __init__(
+        self,
+        model,
+        d_model,
+        d_k,
+        d_v,
+    ):
+        self.spec = locals()
+        self.spec.pop("self")
+        self.spec.pop("model")
+
+        self.model = model.add_subcollection("MultiHeadSelfAttentive")
+
+        self.attention = []
+        for i in range(8):
+            self.attention.append(SingleHeadSelfAttentive(
+                self.model, d_model, d_k, d_v))
+
+    def param_collection(self):
+        return self.model
+
+    @classmethod
+    def from_spec(cls, spec, model):
+        return cls(model, **spec)
+
+    def __call__(self, X):
+        Y = []
+        for attention in self.attention:
+            Y.append(attention(X))
+        return dy.esum(Y)
 
 
 class BiLSTMTagger(object):
@@ -216,6 +244,8 @@ class AttentionTagger(object):
             char_lstm_layers,
             char_lstm_dim,
             word_embedding_dim,
+            pos_embedding_dim,
+            max_sent_len,
             label_hidden_dim,
             dropout,
     ):
@@ -233,6 +263,8 @@ class AttentionTagger(object):
             (char_vocab.size, char_embedding_dim))
         self.word_embeddings = self.model.add_lookup_parameters(
             (word_vocab.size, word_embedding_dim))
+        self.pos_embeddings = self.model.add_lookup_parameters(
+            (max_sent_len, pos_embedding_dim))
 
         self.char_lstm = dy.BiRNNBuilder(
             char_lstm_layers,
@@ -241,15 +273,15 @@ class AttentionTagger(object):
             self.model,
             dy.VanillaLSTMBuilder)
 
-        self.attention = SelfAttentive(
+        self.attention = MultiHeadSelfAttentive(
             self.model,
-            2 * char_lstm_dim + word_embedding_dim,
-            2 * char_lstm_dim + word_embedding_dim,
-            2 * char_lstm_dim + word_embedding_dim)
+            2 * char_lstm_dim + word_embedding_dim + pos_embedding_dim,
+            2 * char_lstm_dim + word_embedding_dim + pos_embedding_dim,
+            2 * char_lstm_dim + word_embedding_dim + pos_embedding_dim)
 
         self.f_label = OutputLayer(
             self.model,
-            2 * char_lstm_dim + word_embedding_dim,
+            2 * char_lstm_dim + word_embedding_dim + pos_embedding_dim,
             label_hidden_dim,
             self.tag_vocab.size)
 
@@ -269,7 +301,7 @@ class AttentionTagger(object):
             self.char_lstm.disable_dropout()
 
         embeddings = []
-        for word in words:
+        for pos, word in enumerate(words):
             count = self.word_vocab.count(word)
             if not count:
                 word = UNK
@@ -283,8 +315,9 @@ class AttentionTagger(object):
                 char_lstm_outputs[0][self.char_lstm_dim:]])
 
             word_embedding = self.word_embeddings[self.word_vocab.index(word)]
-
-            embeddings.append(dy.concatenate([char_embedding, word_embedding]))
+            pos_embedding = self.pos_embeddings[pos]
+            embeddings.append(dy.concatenate(
+                [char_embedding, word_embedding, pos_embedding]))
 
         embeddings = [dy.noise(e, 0.1) for e in embeddings]
         return embeddings

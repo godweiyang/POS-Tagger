@@ -104,6 +104,8 @@ def run_train(args):
             args.char_lstm_layers,
             args.char_lstm_dim,
             args.word_embedding_dim,
+            args.pos_embedding_dim,
+            args.max_sent_len,
             args.label_hidden_dim,
             args.dropout,
         )
@@ -284,8 +286,10 @@ def main():
         "--tagger-type", choices=["bilstm", "attention"], required=True)
     subparser.add_argument("--char-embedding-dim", type=int, default=20)
     subparser.add_argument("--char-lstm-layers", type=int, default=1)
-    subparser.add_argument("--char-lstm-dim", type=int, default=32)
-    subparser.add_argument("--word-embedding-dim", type=int, default=64)
+    subparser.add_argument("--char-lstm-dim", type=int, default=20)
+    subparser.add_argument("--word-embedding-dim", type=int, default=40)
+    subparser.add_argument("--pos-embedding-dim", type=int, default=40)
+    subparser.add_argument("--max-sent-len", type=int, default=300)
     subparser.add_argument("--lstm-layers", type=int, default=2)
     subparser.add_argument("--lstm-dim", type=int, default=64)
     subparser.add_argument("--label-hidden-dim", type=int, default=64)
