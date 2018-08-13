@@ -79,20 +79,34 @@ def run_train(args):
     print("Initializing model...")
 
     model = dy.ParameterCollection()
-    tagger = POStag.POSTagger(
-        model,
-        tag_vocab,
-        char_vocab,
-        word_vocab,
-        args.char_embedding_dim,
-        args.char_lstm_layers,
-        args.char_lstm_dim,
-        args.word_embedding_dim,
-        args.lstm_layers,
-        args.lstm_dim,
-        args.label_hidden_dim,
-        args.dropout,
-    )
+    if args.tagger_type == "bilstm":
+        tagger = POStag.BiLSTMTagger(
+            model,
+            tag_vocab,
+            char_vocab,
+            word_vocab,
+            args.char_embedding_dim,
+            args.char_lstm_layers,
+            args.char_lstm_dim,
+            args.word_embedding_dim,
+            args.lstm_layers,
+            args.lstm_dim,
+            args.label_hidden_dim,
+            args.dropout,
+        )
+    else:
+        tagger = POStag.AttentionTagger(
+            model,
+            tag_vocab,
+            char_vocab,
+            word_vocab,
+            args.char_embedding_dim,
+            args.char_lstm_layers,
+            args.char_lstm_dim,
+            args.word_embedding_dim,
+            args.label_hidden_dim,
+            args.dropout,
+        )
     trainer = dy.AdamTrainer(model)
 
     total_processed = 0
@@ -266,6 +280,8 @@ def main():
     for arg in dynet_args:
         subparser.add_argument(arg)
     subparser.add_argument("--numpy-seed", type=int)
+    subparser.add_argument(
+        "--tagger-type", choices=["bilstm", "attention"], required=True)
     subparser.add_argument("--char-embedding-dim", type=int, default=20)
     subparser.add_argument("--char-lstm-layers", type=int, default=1)
     subparser.add_argument("--char-lstm-dim", type=int, default=32)

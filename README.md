@@ -11,6 +11,7 @@ A new model can be trained using the command `python3 src/main.py train ...` wit
 Argument | Description | Default
 --- | --- | ---
 `--numpy-seed` | NumPy random seed | Random
+`--tagger-type` | `bilstm` or `attention` | N/A
 `--word-embedding-dim` | Word embedding dimension | 64
 `--lstm-layers` | Number of bidirectional LSTM layers | 2
 `--lstm-dim` | Hidden dimension of each LSTM within each layer | 64
@@ -27,7 +28,7 @@ Argument | Description | Default
 To train a tagger using the default hyperparameters, you can use the command:
 
 ```
-python3 src/main.py train --model-path-base models/bilstm-model
+python3 src/main.py train --tagger-type bilstm --model-path-base models/bilstm-model
 ```
 
 ## Evaluation
