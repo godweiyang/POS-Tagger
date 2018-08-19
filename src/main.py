@@ -46,12 +46,18 @@ def run_train(args):
     print("Constructing vocabularies...")
     tag_vocab = vocabulary.Vocabulary()
     tag_vocab.index(POStag.UNK)
+    tag_vocab.index(POStag.START)
+    tag_vocab.index(POStag.STOP)
 
     char_vocab = vocabulary.Vocabulary()
     char_vocab.index(POStag.UNK)
+    char_vocab.index(POStag.START)
+    char_vocab.index(POStag.STOP)
 
     word_vocab = vocabulary.Vocabulary()
     word_vocab.index(POStag.UNK)
+    char_vocab.index(POStag.START)
+    char_vocab.index(POStag.STOP)
 
     for sent in train_sents:
         for word, tag in sent:
@@ -65,7 +71,7 @@ def run_train(args):
     word_vocab.freeze()
 
     def print_vocabulary(name, vocab):
-        special = {POStag.UNK}
+        special = {POStag.UNK, POStag.START, POStag.STOP}
         print("{} ({:,}): {}".format(
             name, vocab.size,
             sorted(value for value in vocab.values if value in special) +
@@ -130,7 +136,7 @@ def run_train(args):
             dy.renew_cg()
             words = [word for word, tag in sent]
             golds = [tag for word, tag in sent]
-            predicted, loss = tagger.predict(words)
+            predicted, loss = tagger.predict(words, None, args.use_crf)
 
             if predicted == golds:
                 good_sent += 1
@@ -185,7 +191,7 @@ def run_train(args):
             for sent in train_sents[start_index:start_index + args.batch_size]:
                 words = [word for word, tag in sent]
                 tags = [tag for word, tag in sent]
-                predicted, loss = tagger.predict(words, tags)
+                predicted, loss = tagger.predict(words, tags, args.use_crf)
                 batch_losses.append(loss)
                 total_processed += 1
                 current_processed += 1
@@ -237,7 +243,8 @@ def run_test(args):
         dy.renew_cg()
         words = [word for word, tag in sent]
         golds = [tag for word, tag in sent]
-        predicted, loss = tagger.predict(words)
+
+        predicted, loss = tagger.predict(words, None, args.use_crf)
 
         if predicted == golds:
             good_sent += 1
@@ -284,20 +291,21 @@ def main():
     subparser.add_argument("--numpy-seed", type=int)
     subparser.add_argument(
         "--tagger-type", choices=["bilstm", "attention"], required=True)
-    subparser.add_argument("--char-embedding-dim", type=int, default=20)
+    subparser.add_argument("--char-embedding-dim", type=int, default=32)
     subparser.add_argument("--char-lstm-layers", type=int, default=1)
-    subparser.add_argument("--char-lstm-dim", type=int, default=20)
-    subparser.add_argument("--word-embedding-dim", type=int, default=40)
-    subparser.add_argument("--pos-embedding-dim", type=int, default=40)
+    subparser.add_argument("--char-lstm-dim", type=int, default=32)
+    subparser.add_argument("--word-embedding-dim", type=int, default=256)
+    subparser.add_argument("--pos-embedding-dim", type=int, default=256)
     subparser.add_argument("--max-sent-len", type=int, default=300)
     subparser.add_argument("--lstm-layers", type=int, default=2)
     subparser.add_argument("--lstm-dim", type=int, default=64)
-    subparser.add_argument("--label-hidden-dim", type=int, default=64)
-    subparser.add_argument("--dropout", type=float, default=0.4)
+    subparser.add_argument("--label-hidden-dim", type=int, default=128)
+    subparser.add_argument("--use-crf", action="store_true")
+    subparser.add_argument("--dropout", type=float, default=0.1)
     subparser.add_argument("--model-path-base", required=True)
     subparser.add_argument("--train-path", default="data/train.data")
     subparser.add_argument("--dev-path", default="data/dev.data")
-    subparser.add_argument("--batch-size", type=int, default=10)
+    subparser.add_argument("--batch-size", type=int, default=64)
     subparser.add_argument("--epochs", type=int)
     subparser.add_argument("--checks-per-epoch", type=int, default=4)
     subparser.add_argument("--print-vocabs", action="store_true")
